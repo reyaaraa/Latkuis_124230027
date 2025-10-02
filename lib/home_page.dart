@@ -4,9 +4,9 @@ import 'vehicle-data.dart';
 import 'detail_page.dart';
 import 'profile_page.dart';
 
-/// HomePage utama (root) yang memuat bottom navigation.
-/// - Tab 0 = Home (grid kendaraan)
-/// - Tab 1 = Profile (menampilkan ProfilePage)
+/// Halaman utama aplikasi dengan BottomNavigationBar.
+/// - Tab 0 = Home (menampilkan daftar kendaraan dalam bentuk ListView)
+/// - Tab 1 = Profile (menampilkan halaman profil user)
 class HomePage extends StatefulWidget {
   final String username;
   const HomePage({super.key, required this.username});
@@ -20,27 +20,31 @@ class _HomePageState extends State<HomePage> {
   // STATE / DATA YANG DIGUNAKAN
   // ---------------------------
 
-  // Menyimpan index kendaraan yang dipindahkan ke "sampah" (trash)
+  /// Menyimpan index kendaraan yang masuk ke "sampah".
+  /// Kendaraan yang ada di _trashBin tidak akan tampil di Home.
   final List<int> _trashBin = [];
 
-  // Menyimpan index kendaraan yang disukai (favorite).
-  // NOTE: "suka" TIDAK merubah urutan list — hanya toggle state.
+  /// Menyimpan index kendaraan yang disukai.
+  /// Digunakan untuk toggle icon ❤️.
   final List<int> _favorite = [];
 
-  // Controller untuk search bar
+  /// Controller untuk search bar (input pencarian).
   final TextEditingController _searchController = TextEditingController();
 
-  // Kata kunci pencarian (lowercase)
+  /// Kata kunci pencarian (diketik user).
   String _searchKeyword = "";
 
-  // Index halaman aktif pada bottom navigation (0 = home, 1 = profile)
+  /// Index halaman aktif pada BottomNavigationBar.
+  /// - 0 = Home (List kendaraan)
+  /// - 1 = Profile
   int _selectedIndex = 0;
 
   // ---------------------------
   // FUNGSI PENDUKUNG
   // ---------------------------
 
-  // Logout dengan konfirmasi (tetap menggunakan LoginPage yang ada)
+  /// Logout dengan konfirmasi.
+  /// Jika user menekan "Iya", maka diarahkan kembali ke LoginPage.
   void _logout(BuildContext context) {
     showDialog(
       context: context,
@@ -54,7 +58,6 @@ class _HomePageState extends State<HomePage> {
           ),
           TextButton(
             onPressed: () {
-              // Ganti route ke halaman login
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -67,8 +70,8 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Buka halaman Sampah (Trash). Kita push halaman baru yang menampilkan
-  // daftar kendaraan yang ada di _trashBin dan menyediakan tombol Restore.
+  /// Membuka halaman Sampah.
+  /// TrashPage akan menerima data kendaraan yang sudah dihapus.
   void _openTrashPage() {
     Navigator.push(
       context,
@@ -76,12 +79,10 @@ class _HomePageState extends State<HomePage> {
         builder: (context) => TrashPage(
           trashBin: _trashBin,
           vehicleList: vehicleList,
-          // onRestore dipanggil ketika user menekan Restore pada TrashPage
           onRestore: (index) {
+            // Jika user klik Restore, keluarkan dari _trashBin
             setState(() {
-              _trashBin.remove(
-                index,
-              ); // keluarkan dari trash → kembali tampil di grid
+              _trashBin.remove(index);
             });
           },
         ),
@@ -89,7 +90,9 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Toggle like/suka. Hanya menambah/menghapus dari list _favorite.
+  /// Toggle favorite (like).
+  /// Jika kendaraan sudah ada di _favorite → hapus.
+  /// Jika belum → tambahkan.
   void _toggleFavorite(int vehicleIndex) {
     setState(() {
       if (_favorite.contains(vehicleIndex)) {
@@ -100,7 +103,7 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  // Hapus item ke sampah (tambahkan index ke _trashBin)
+  /// Pindahkan kendaraan ke sampah (trash).
   void _moveToTrash(int vehicleIndex) {
     setState(() {
       if (!_trashBin.contains(vehicleIndex)) {
@@ -110,13 +113,14 @@ class _HomePageState extends State<HomePage> {
   }
 
   // ---------------------------
-  // WIDGET BANTU: halaman HOME (grid)
+  // HALAMAN HOME (LIST KENDARAAN)
   // ---------------------------
-  Widget _buildHomeGrid() {
-    // Buat daftar index kendaraan yang tidak di-sampah dan cocok filter
+  Widget _buildHomeList() {
+    // Filter kendaraan: hanya tampilkan yang
+    // - Tidak ada di trash
+    // - Nama/tipe sesuai keyword pencarian
     final filtered = List.generate(vehicleList.length, (i) => i).where((index) {
-      if (_trashBin.contains(index))
-        return false; // jangan tampilkan yg ada di sampah
+      if (_trashBin.contains(index)) return false;
       final v = vehicleList[index];
       final keyword = _searchKeyword.toLowerCase();
       return v.name.toLowerCase().contains(keyword) ||
@@ -124,20 +128,17 @@ class _HomePageState extends State<HomePage> {
     }).toList();
 
     return Scaffold(
-      // AppBar khusus untuk halaman Home (inner Scaffold). Kita letakkan appbar
-      // di dalam halaman Home sehingga ketika berpindah tab, setiap halaman
-      // dapat punya appBar-nya sendiri.
       appBar: AppBar(
         title: Text("Selamat datang, ${widget.username}"),
         backgroundColor: Colors.orange,
         actions: [
-          // Akses halaman Sampah dari appbar Home
+          // Tombol menuju ke halaman Sampah
           IconButton(
             icon: const Icon(Icons.delete),
             tooltip: "Sampah",
             onPressed: _openTrashPage,
           ),
-          // Logout
+          // Tombol logout
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: "Logout",
@@ -146,10 +147,9 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
 
-      // Body: search bar + grid
       body: Column(
         children: [
-          // SEARCH BAR
+          // Search bar
           Padding(
             padding: const EdgeInsets.all(12),
             child: TextField(
@@ -161,7 +161,6 @@ class _HomePageState extends State<HomePage> {
                     ? IconButton(
                         icon: const Icon(Icons.clear),
                         onPressed: () {
-                          // Clear search text
                           _searchController.clear();
                           setState(() {
                             _searchKeyword = "";
@@ -171,10 +170,6 @@ class _HomePageState extends State<HomePage> {
                     : null,
                 filled: true,
                 fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: 0,
-                  horizontal: 16,
-                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(25),
                   borderSide: BorderSide.none,
@@ -184,120 +179,60 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
 
-          // GRID: 2 kolom card kendaraan
+          // List kendaraan (kebawah)
           Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2, // 2 kolom
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 0.75,
-              ),
+            child: ListView.builder(
+              padding: const EdgeInsets.all(12),
               itemCount: filtered.length,
               itemBuilder: (context, idx) {
                 final vehicleIndex = filtered[idx];
                 final vehicle = vehicleList[vehicleIndex];
                 final liked = _favorite.contains(vehicleIndex);
 
-                return GestureDetector(
-                  onTap: () {
-                    // Buka halaman detail ketika card diketuk
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (c) => DetailPage(vehicle: vehicle),
-                      ),
-                    );
-                  },
-                  child: Card(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 3,
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      radius: 30,
+                      backgroundImage: NetworkImage(vehicle.imageUrls[0]),
+                      backgroundColor: Colors.orange.shade100,
                     ),
-                    elevation: 4,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                    title: Text(
+                      vehicle.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(vehicle.type),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        // FOTO (atas)
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(12),
-                            ),
-                            child: Image.network(
-                              // gunakan imageUrls[0] sebagai gambar utama
-                              vehicle.imageUrls.isNotEmpty
-                                  ? vehicle.imageUrls[0]
-                                  : '',
-                              fit: BoxFit.cover,
-                              errorBuilder: (c, e, s) => Container(
-                                color: Colors.grey.shade200,
-                                alignment: Alignment.center,
-                                child: const Icon(
-                                  Icons.broken_image,
-                                  size: 40,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ),
+                        // Tombol Like
+                        IconButton(
+                          icon: Icon(
+                            liked ? Icons.favorite : Icons.favorite_border,
+                            color: liked ? Colors.red : Colors.grey,
                           ),
+                          onPressed: () => _toggleFavorite(vehicleIndex),
                         ),
-
-                        // Nama, tipe dan aksi (bawah)
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Nama (bold)
-                              Text(
-                                vehicle.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              // Tipe (warna oranye)
-                              Text(
-                                vehicle.type,
-                                style: TextStyle(
-                                  color: Colors.orange.shade700,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              // ROW aksi: Suka (toggle only) & Sampah (pindah ke trash)
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  // Tombol Suka (♥) — hanya toggle state, TIDAK mengubah urutan
-                                  IconButton(
-                                    icon: Icon(
-                                      liked
-                                          ? Icons.favorite
-                                          : Icons.favorite_border,
-                                    ),
-                                    color: liked ? Colors.red : Colors.grey,
-                                    onPressed: () =>
-                                        _toggleFavorite(vehicleIndex),
-                                    tooltip: liked ? "Batal suka" : "Suka",
-                                  ),
-
-                                  // Tombol Sampah (🗑️) — pindahkan ke _trashBin
-                                  IconButton(
-                                    icon: const Icon(Icons.delete),
-                                    color: Colors.red.shade700,
-                                    onPressed: () => _moveToTrash(vehicleIndex),
-                                    tooltip: "Hapus (pindah ke sampah)",
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                        // Tombol Hapus
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => _moveToTrash(vehicleIndex),
                         ),
                       ],
                     ),
+                    // Klik → buka detail kendaraan
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (c) => DetailPage(vehicle: vehicle),
+                        ),
+                      );
+                    },
                   ),
                 );
               },
@@ -309,22 +244,18 @@ class _HomePageState extends State<HomePage> {
   }
 
   // ---------------------------
-  // BUILD ROOT: IndexedStack + BottomNavigationBar
+  // ROOT DENGAN BOTTOM NAVIGATION
   // ---------------------------
   @override
   Widget build(BuildContext context) {
-    // Kita gunakan IndexedStack supaya state tiap tab tetap terjaga saat berpindah
+    // Daftar halaman/tab
     final pages = <Widget>[
-      _buildHomeGrid(), // halaman Home (mengandung Scaffold sendiri)
-      // ProfilePage sudah berbentuk widget (Scaffold) — kita pakai langsung
-      const ProfilePage(),
+      _buildHomeList(), // Halaman Home (List kendaraan)
+      const ProfilePage(), // Halaman Profile
     ];
 
     return Scaffold(
-      // Body menggunakan IndexedStack agar kedua halaman tetap hidup dan state terjaga
       body: IndexedStack(index: _selectedIndex, children: pages),
-
-      // Bottom navigation di bawah: Home & Profile
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         selectedItemColor: Colors.orange,
@@ -337,7 +268,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Jangan lupa dispose controller
   @override
   void dispose() {
     _searchController.dispose();
@@ -346,12 +276,12 @@ class _HomePageState extends State<HomePage> {
 }
 
 /// Halaman Sampah (Trash)
-/// - Menerima list index kendaraan yang dihapus (trashBin)
-/// - Menampilkan tiap item dengan tombol "Restore" untuk mengembalikan
+/// - Menampilkan kendaraan yang dihapus
+/// - Ada tombol Restore untuk mengembalikan kendaraan ke Home
 class TrashPage extends StatelessWidget {
-  final List<int> trashBin; // index kendaraan yg ada di sampah
-  final List vehicleList; // daftar kendaraan utama
-  final Function(int) onRestore; // callback restore
+  final List<int> trashBin;
+  final List vehicleList;
+  final Function(int) onRestore;
 
   const TrashPage({
     super.key,
@@ -377,7 +307,6 @@ class TrashPage extends StatelessWidget {
                 final vehicle = vehicleList[vehicleIndex];
 
                 return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 6),
                   child: ListTile(
                     leading: CircleAvatar(
                       backgroundImage: NetworkImage(vehicle.imageUrls[0]),
@@ -387,10 +316,8 @@ class TrashPage extends StatelessWidget {
                     trailing: TextButton(
                       child: const Text("Restore"),
                       onPressed: () {
-                        // Panggil callback untuk restore (menghapus index dari trashBin)
                         onRestore(vehicleIndex);
-                        // Kembali ke halaman Home
-                        Navigator.pop(context);
+                        Navigator.pop(context); // kembali ke Home
                       },
                     ),
                   ),
